@@ -1,6 +1,9 @@
 import type { Comment, Market, ProbabilityPoint, UserBet } from '../types.js';
-import deployments from './deployments.json' with { type: 'json' };
+import testnetDeployments from './deployments-testnet.json' with { type: 'json' };
+import mainnetDeployments from './deployments-mainnet.json' with { type: 'json' };
+import { config } from '../config.js';
 
+const deployments = config.USE_TESTNET ? testnetDeployments : mainnetDeployments;
 const marketMapping = (deployments as { marketMapping?: Record<string, string> }).marketMapping ?? {};
 
 function mkOutcomes(labels: string[], probs: number[], pools: number[]) {

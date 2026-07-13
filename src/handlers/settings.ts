@@ -1,4 +1,5 @@
 import type { Context } from 'grammy';
+import { config } from '../config.js';
 import { ensureUser, getSettings, saveSettings } from '../db/index.js';
 import { settingsKeyboard } from '../keyboards/index.js';
 
@@ -18,8 +19,7 @@ export async function settingsHandler(ctx: Context) {
       `\`default 50\` — default bet USD\n` +
       `\`quick 10,25,50,100\` — quick bet buttons\n` +
       `\`cashback 3\` — display cashback %`,
-    { parse_mode: 'Markdown', reply_markup: settingsKeyboard(s),
-    },
+    { parse_mode: 'Markdown', reply_markup: settingsKeyboard(s, config.USE_TESTNET) },
   );
 }
 

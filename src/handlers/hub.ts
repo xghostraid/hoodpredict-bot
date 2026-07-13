@@ -25,7 +25,7 @@ export async function buildHubMessage(telegramId: number, username?: string): Pr
     const mode = user.wallet_mode === 'custodial' ? '🔐' : '🔗';
     walletLine = `${mode} \`${shortenAddress(user.wallet_address)}\``;
     const bal = await getUsdcBalance(user.wallet_address as `0x${string}`);
-    usdcLine = `💵 *$${bal.toFixed(2)}* USDC`;
+    usdcLine = `💵 *$${bal.toFixed(2)}* ${config.COLLATERAL_SYMBOL}`;
   }
 
   const trending = await listMarkets('trending');

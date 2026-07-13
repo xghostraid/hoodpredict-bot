@@ -146,13 +146,13 @@ export function copyWhaleKeyboard() {
   return kb;
 }
 
-export function settingsKeyboard(s: { notifyResolve: boolean; notifyWhale: boolean }) {
-  return new InlineKeyboard()
+export function settingsKeyboard(s: { notifyResolve: boolean; notifyWhale: boolean }, testnet = false) {
+  const kb = new InlineKeyboard()
     .text(`🔔 Resolve: ${s.notifyResolve ? 'ON' : 'OFF'}`, 'set:toggle_resolve')
     .text(`🐋 Whales: ${s.notifyWhale ? 'ON' : 'OFF'}`, 'set:toggle_whale')
-    .row()
-    .text('🚰 Testnet faucet', 'set:faucet')
-    .text('🏠 Hub', 'menu:home');
+    .row();
+  if (testnet) kb.text('🚰 Testnet faucet', 'set:faucet');
+  return kb.text('🏠 Hub', 'menu:home');
 }
 
 export function ordersKeyboard() {

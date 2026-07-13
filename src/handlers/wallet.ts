@@ -1,5 +1,6 @@
 import type { Context } from 'grammy';
 import { randomBytes } from 'crypto';
+import { config } from '../config.js';
 import {
   buildSignMessage,
   isValidAddress,
@@ -187,7 +188,9 @@ export async function walletCallback(ctx: Context) {
       `🎉 *HoodPredict wallet activated!*\n\n` +
         `👛 \`${shortenAddress(pending.address)}\`\n\n` +
         `You can bet instantly from the bot.\n` +
-        `Get testnet USDC from the [Robinhood faucet](https://faucet.testnet.chain.robinhood.com).`,
+        config.USE_TESTNET
+          ? `Get testnet USDC from the [Robinhood faucet](https://faucet.testnet.chain.robinhood.com).`
+          : `Fund this wallet with USDG (Global Dollar) on Robinhood Chain mainnet to start betting.`,
       { parse_mode: 'Markdown' },
     );
     return;

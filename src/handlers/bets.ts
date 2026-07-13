@@ -1,4 +1,5 @@
 import type { Context } from 'grammy';
+import { config } from '../config.js';
 import { getEnrichedMarket } from '../chain/markets.js';
 import { betAmountKeyboard, instantBetKeyboard } from '../keyboards/index.js';
 import { getSettings } from '../db/index.js';
@@ -224,7 +225,7 @@ export async function instantBetCallback(ctx: Context) {
     const msg = e instanceof Error ? e.message : 'Transaction failed';
     await ctx.reply(
       `❌ Bet failed: ${msg.slice(0, 120)}\n\n` +
-        `Ensure you have testnet USDC + ETH for gas.`,
+        `Ensure you have ${config.COLLATERAL_SYMBOL} + ETH for gas.`,
       { parse_mode: 'Markdown' },
     );
   }

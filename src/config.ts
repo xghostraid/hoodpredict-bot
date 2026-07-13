@@ -6,9 +6,10 @@ const envSchema = z.object({
   BOT_USERNAME: z.string().default('HoodPredictBot'),
   XAI_API_KEY: z.string().optional(),
   XAI_MODEL: z.string().default('grok-4.5'),
-  RPC_URL: z.string().default('https://rpc.testnet.chain.robinhood.com'),
-  CHAIN_ID: z.coerce.number().default(46630),
-  USE_TESTNET: z.coerce.boolean().default(true),
+  RPC_URL: z.string().default('https://rpc.mainnet.chain.robinhood.com'),
+  CHAIN_ID: z.coerce.number().default(4663),
+  USE_TESTNET: z.coerce.boolean().default(false),
+  COLLATERAL_SYMBOL: z.string().optional(),
   FACTORY_ADDRESS: z.string().optional(),
   USDC_ADDRESS: z.string().optional(),
   ORACLE_ADAPTER_ADDRESS: z.string().optional(),
@@ -33,7 +34,11 @@ if (!parsed.success) {
   throw new Error('TELEGRAM_BOT_TOKEN is required. Copy .env.example to .env');
 }
 
-export const config = parsed.data;
+export const config = {
+  ...parsed.data,
+  COLLATERAL_SYMBOL:
+    parsed.data.COLLATERAL_SYMBOL ?? (parsed.data.USE_TESTNET ? 'USDC' : 'USDG'),
+};
 
 export const DISCLAIMER =
   '⚠️ *Trading involves risk. Not financial advice.* Predictions can lose 100%. Only bet what you can afford to lose.';

@@ -1,5 +1,4 @@
 import { Bot } from 'grammy';
-import { run } from '@grammyjs/runner';
 import { config } from './config.js';
 import { registerHandlers } from './handlers/index.js';
 import { checkMarketResolutions } from './services/notifications.js';
@@ -27,5 +26,10 @@ export function startBot(bot: ReturnType<typeof createBot>) {
   console.log(`🏹 HoodPredict Bot (@${config.BOT_USERNAME}) starting…`);
   console.log(`⛓  Chain: Robinhood ${config.USE_TESTNET ? 'Testnet' : 'Mainnet'} (${config.CHAIN_ID})`);
 
-  return run(bot);
+  void bot.start({
+    drop_pending_updates: true,
+    onStart: () => console.log('✅ Telegram polling active'),
+  });
+
+  return bot;
 }

@@ -1,0 +1,227 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_factory",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "resolver",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "authorized",
+        "type": "bool"
+      }
+    ],
+    "name": "ResolverUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "market",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "winner",
+        "type": "uint8"
+      }
+    ],
+    "name": "SportsResolved",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "market",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "priceE6",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "thresholdE6",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "winner",
+        "type": "uint8"
+      }
+    ],
+    "name": "StockResolved",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "market",
+        "type": "address"
+      }
+    ],
+    "name": "cancelMarket",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "factory",
+    "outputs": [
+      {
+        "internalType": "contract HoodPredictFactory",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "owner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "market",
+        "type": "address"
+      },
+      {
+        "internalType": "uint8",
+        "name": "winningOutcome",
+        "type": "uint8"
+      }
+    ],
+    "name": "resolveSports",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "market",
+        "type": "address"
+      },
+      {
+        "internalType": "uint8",
+        "name": "yesOutcome",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint8",
+        "name": "noOutcome",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint256",
+        "name": "thresholdE6",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "priceE6",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "resolveYesIfAbove",
+        "type": "bool"
+      }
+    ],
+    "name": "resolveStockThreshold",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "resolvers",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "resolver",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "authorized",
+        "type": "bool"
+      }
+    ],
+    "name": "setResolver",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "transferOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]

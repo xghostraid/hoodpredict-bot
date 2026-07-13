@@ -1,47 +1,25 @@
 import type { Context } from 'grammy';
-import { ensureUser } from '../db/index.js';
 import { mainMenuKeyboard } from '../keyboards/index.js';
 import { DISCLAIMER } from '../config.js';
-
-export const WELCOME = (
-  `🎰 *Welcome to HoodPredict!*\n\n` +
-  `Polymarket-style prediction markets on *Robinhood Chain* 🏹\n\n` +
-  `📈 Stock Tokens · 🏆 Sports · ₿ Crypto · 🏛️ Politics\n\n` +
-  `*Free:* Browse markets, place bets, track portfolio\n` +
-  `*Premium:* 🤖 AI Auto-Trader + advanced analytics\n\n` +
-  `${DISCLAIMER}`
-);
+import { hubHandler } from './hub.js';
 
 export const HELP_TEXT = (
-  `❓ *HoodPredict Bot Help*\n\n` +
-  `*Commands:*\n` +
-  `/start — Main menu\n` +
-  `/markets — Browse prediction markets\n` +
-  `/mybets — Your active bets\n` +
-  `/portfolio — Portfolio & P&L\n` +
-  `/create — Create a new market\n` +
-  `/premium — Upgrade + 7-day trial\n` +
-  `/ai — AI Auto-Trader (Premium)\n` +
-  `/wallet — Create, import, or link wallet\n` +
-  `/import — Import seed phrase or private key\n` +
-  `/export — Export wallet backup\n` +
-  `/recover — Re-link wallet after Telegram reset\n` +
-  `/search <query> — Find markets\n\n` +
-  `*Betting flow:*\n` +
-  `1. Browse market → pick outcome → choose amount\n` +
-  `2. Sign transaction in your wallet (never share private keys!)\n` +
-  `3. Confirm with /confirm <marketId> <txHash>\n\n` +
+  `❓ *HoodPredict Terminal Help*\n\n` +
+  `*Based-style features, prediction market native:*\n\n` +
+  `⚡ *Quick Bet* — one-tap on hot/live markets\n` +
+  `📋 *Limit Orders* — bet when odds hit your target\n` +
+  `🐋 *Copy Whales* — mirror top predictors\n` +
+  `🏆 *Leaderboard* — top bettors by volume\n` +
+  `🎁 *Refer & Earn* — 5% of friends' fees\n` +
+  `⚙️ *Settings* — default bet, cashback, alerts\n` +
+  `👛 *Wallet* — create, import, or link\n` +
+  `🤖 *AI Trader* — auto-scan markets (Premium)\n\n` +
+  `*Commands:* /start /markets /quickbet /limit /wallet /refer /leaderboard /copy /settings\n\n` +
   `${DISCLAIMER}`
 );
 
 export async function startHandler(ctx: Context) {
-  const user = ctx.from;
-  if (!user) return;
-  ensureUser(user.id, user.username);
-  await ctx.reply(WELCOME, {
-    parse_mode: 'Markdown',
-    reply_markup: mainMenuKeyboard(),
-  });
+  await hubHandler(ctx);
 }
 
 export async function helpHandler(ctx: Context) {
@@ -61,20 +39,26 @@ export async function menuRouter(ctx: Context) {
   const { premiumHandler } = await import('./premium.js');
   const { aiHandler } = await import('./ai.js');
   const { walletHandler } = await import('./wallet.js');
+  const { quickBetHandler } = await import('./quickbet.js');
+  const { leaderboardHandler } = await import('./leaderboard.js');
+  const { copyTradeHandler } = await import('./copytrade.js');
+  const { ordersHandler } = await import('./orders.js');
+  const { settingsHandler } = await import('./settings.js');
+  const { referralsHandler } = await import('./referrals.js');
 
   const routes: Record<string, (c: Context) => Promise<void>> = {
+    '⚡ Quick Bet': quickBetHandler,
     '📊 Markets': marketsHandler,
-    '🎯 My Bets': myBetsHandler,
     '💼 Portfolio': portfolioHandler,
-    '🔔 Alerts': async (c) => {
-      await c.reply(
-        '🔔 *Alerts*\n\nSubscribe to any market with the 🔔 button on market details.\nYou\'ll get notified when markets resolve.\n\nPremium users get early access to new markets.',
-        { parse_mode: 'Markdown' },
-      );
-    },
+    '🎯 My Bets': myBetsHandler,
+    '🏆 Leaderboard': leaderboardHandler,
+    '🐋 Copy Whales': copyTradeHandler,
+    '📋 Limit Orders': ordersHandler,
+    '👛 Wallet': walletHandler,
+    '⚙️ Settings': settingsHandler,
+    '🎁 Refer & Earn': referralsHandler,
     '💎 Premium': premiumHandler,
     '🤖 AI Trader': aiHandler,
-    '👛 Wallet': walletHandler,
     '❓ Help': helpHandler,
   };
 

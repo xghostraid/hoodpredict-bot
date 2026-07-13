@@ -18,6 +18,28 @@ export interface DbUser {
   tier: PremiumTier;
   trial_started_at: string | null;
   premium_until: string | null;
+  referred_by: number | null;
+  referral_earnings: number;
+  referrals_count: number;
+}
+
+export interface UserSettings {
+  defaultBetUsd: number;
+  quickBets: number[];
+  notifyResolve: boolean;
+  notifyWhale: boolean;
+  cashbackPct: number;
+}
+
+export interface LimitOrder {
+  id: string;
+  telegramId: number;
+  marketId: string;
+  outcomeIndex: number;
+  amountUsd: number;
+  triggerProbability: number;
+  direction: 'above' | 'below';
+  status: 'active' | 'filled' | 'cancelled';
 }
 
 let db: Database.Database | null = null;
@@ -28,30 +50,50 @@ export function getDb(): Database.Database {
     db = new Database(config.DB_PATH);
     db.pragma('journal_mode = WAL');
     db.exec(SQLITE_SCHEMA);
-    migrateWalletColumns(db);
+    runMigrations(db);
   }
   return db;
 }
 
-function migrateWalletColumns(d: Database.Database): void {
+function runMigrations(d: Database.Database): void {
   for (const sql of [
     `ALTER TABLE users ADD COLUMN wallet_mode TEXT NOT NULL DEFAULT 'none'`,
     `ALTER TABLE users ADD COLUMN encrypted_credential TEXT`,
+    `ALTER TABLE users ADD COLUMN referred_by INTEGER`,
+    `ALTER TABLE users ADD COLUMN referral_earnings REAL NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN referrals_count INTEGER NOT NULL DEFAULT 0`,
   ]) {
     try {
       d.exec(sql);
     } catch {
-      /* column exists */
+      /* exists */
     }
   }
 }
 
-export function ensureUser(telegramId: number, username?: string): DbUser {
+export function ensureUser(
+  telegramId: number,
+  username?: string,
+  referredBy?: number | null,
+): DbUser {
   const d = getDb();
+  const isNew = !d.prepare('SELECT 1 FROM users WHERE telegram_id = ?').get(telegramId);
+
   d.prepare(
-    `INSERT INTO users (telegram_id, username) VALUES (?, ?)
+    `INSERT INTO users (telegram_id, username, referred_by) VALUES (?, ?, ?)
      ON CONFLICT(telegram_id) DO UPDATE SET username = COALESCE(excluded.username, username)`,
-  ).run(telegramId, username ?? null);
+  ).run(telegramId, username ?? null, referredBy ?? null);
+
+  if (isNew && referredBy && referredBy !== telegramId) {
+    d.prepare(`UPDATE users SET referrals_count = referrals_count + 1 WHERE telegram_id = ?`).run(
+      referredBy,
+    );
+  }
+
+  d.prepare(
+    `INSERT OR IGNORE INTO user_settings (telegram_id) VALUES (?)`,
+  ).run(telegramId);
+
   return getUser(telegramId)!;
 }
 
@@ -70,7 +112,153 @@ export function getUser(telegramId: number): DbUser | null {
     tier: resolveTier(row),
     trial_started_at: row.trial_started_at as string | null,
     premium_until: row.premium_until as string | null,
+    referred_by: (row.referred_by as number | null) ?? null,
+    referral_earnings: (row.referral_earnings as number) ?? 0,
+    referrals_count: (row.referrals_count as number) ?? 0,
   };
+}
+
+export function getSettings(telegramId: number): UserSettings {
+  const row = getDb()
+    .prepare('SELECT * FROM user_settings WHERE telegram_id = ?')
+    .get(telegramId) as Record<string, unknown> | undefined;
+
+  if (!row) {
+    return {
+      defaultBetUsd: 25,
+      quickBets: [10, 25, 50, 100],
+      notifyResolve: true,
+      notifyWhale: true,
+      cashbackPct: 2,
+    };
+  }
+
+  return {
+    defaultBetUsd: row.default_bet_usd as number,
+    quickBets: (row.quick_bets as string).split(',').map(Number),
+    notifyResolve: Boolean(row.notify_resolve),
+    notifyWhale: Boolean(row.notify_whale),
+    cashbackPct: row.cashback_pct as number,
+  };
+}
+
+export function saveSettings(telegramId: number, partial: Partial<UserSettings>): void {
+  const cur = getSettings(telegramId);
+  const next = { ...cur, ...partial };
+  getDb()
+    .prepare(
+      `INSERT INTO user_settings (telegram_id, default_bet_usd, quick_bets, notify_resolve, notify_whale, cashback_pct)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(telegram_id) DO UPDATE SET
+         default_bet_usd = excluded.default_bet_usd,
+         quick_bets = excluded.quick_bets,
+         notify_resolve = excluded.notify_resolve,
+         notify_whale = excluded.notify_whale,
+         cashback_pct = excluded.cashback_pct`,
+    )
+    .run(
+      telegramId,
+      next.defaultBetUsd,
+      next.quickBets.join(','),
+      next.notifyResolve ? 1 : 0,
+      next.notifyWhale ? 1 : 0,
+      next.cashbackPct,
+    );
+}
+
+export function addLimitOrder(order: Omit<LimitOrder, 'id' | 'status'>): string {
+  const id = randomUUID();
+  getDb()
+    .prepare(
+      `INSERT INTO limit_orders (id, telegram_id, market_id, outcome_index, amount_usd, trigger_probability, direction)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      id,
+      order.telegramId,
+      order.marketId,
+      order.outcomeIndex,
+      order.amountUsd,
+      order.triggerProbability,
+      order.direction,
+    );
+  return id;
+}
+
+export function getActiveLimitOrders(telegramId?: number): LimitOrder[] {
+  const sql = telegramId
+    ? `SELECT * FROM limit_orders WHERE telegram_id = ? AND status = 'active'`
+    : `SELECT * FROM limit_orders WHERE status = 'active'`;
+  const rows = (
+    telegramId
+      ? getDb().prepare(sql).all(telegramId)
+      : getDb().prepare(sql).all()
+  ) as Record<string, unknown>[];
+
+  return rows.map((r) => ({
+    id: r.id as string,
+    telegramId: r.telegram_id as number,
+    marketId: r.market_id as string,
+    outcomeIndex: r.outcome_index as number,
+    amountUsd: r.amount_usd as number,
+    triggerProbability: r.trigger_probability as number,
+    direction: r.direction as 'above' | 'below',
+    status: r.status as LimitOrder['status'],
+  }));
+}
+
+export function fillLimitOrder(id: string): void {
+  getDb().prepare(`UPDATE limit_orders SET status = 'filled' WHERE id = ?`).run(id);
+}
+
+export function watchWhale(telegramId: number, whaleId: string): boolean {
+  const r = getDb()
+    .prepare(`INSERT OR IGNORE INTO whale_watches (telegram_id, whale_id) VALUES (?, ?)`)
+    .run(telegramId, whaleId);
+  return r.changes > 0;
+}
+
+export function getWatchedWhales(telegramId: number): string[] {
+  const rows = getDb()
+    .prepare(`SELECT whale_id FROM whale_watches WHERE telegram_id = ?`)
+    .all(telegramId) as { whale_id: string }[];
+  return rows.map((r) => r.whale_id);
+}
+
+export function getLeaderboard(limit = 10): {
+  telegramId: number;
+  username: string | null;
+  volume: number;
+  bets: number;
+  wins: number;
+}[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT b.telegram_id, u.username,
+              SUM(b.amount_usd) as volume,
+              COUNT(*) as bets,
+              SUM(CASE WHEN b.status = 'won' THEN 1 ELSE 0 END) as wins
+       FROM bets b
+       LEFT JOIN users u ON u.telegram_id = b.telegram_id
+       WHERE b.status IN ('active','won','lost')
+       GROUP BY b.telegram_id
+       ORDER BY volume DESC
+       LIMIT ?`,
+    )
+    .all(limit) as Record<string, unknown>[];
+  return rows.map((r) => ({
+    telegramId: r.telegram_id as number,
+    username: r.username as string | null,
+    volume: (r.volume as number) ?? 0,
+    bets: (r.bets as number) ?? 0,
+    wins: (r.wins as number) ?? 0,
+  }));
+}
+
+export function addReferralEarnings(referrerId: number, amount: number): void {
+  getDb()
+    .prepare(`UPDATE users SET referral_earnings = referral_earnings + ? WHERE telegram_id = ?`)
+    .run(amount, referrerId);
 }
 
 function resolveTier(row: Record<string, unknown>): PremiumTier {

@@ -1,12 +1,14 @@
 import { InlineKeyboard } from 'grammy';
 import type { Market } from '../types.js';
 import { config } from '../config.js';
+import { TOP_WHALES } from '../data/whales.js';
 
 export const MAIN_MENU = [
-  ['📊 Markets', '🎯 My Bets'],
-  ['💼 Portfolio', '🔔 Alerts'],
-  ['💎 Premium', '🤖 AI Trader'],
-  ['👛 Wallet', '❓ Help'],
+  ['⚡ Quick Bet', '📊 Markets', '💼 Portfolio'],
+  ['🎯 My Bets', '🏆 Leaderboard', '🐋 Copy Whales'],
+  ['📋 Limit Orders', '👛 Wallet', '⚙️ Settings'],
+  ['🎁 Refer & Earn', '💎 Premium', '🤖 AI Trader'],
+  ['❓ Help'],
 ];
 
 export function mainMenuKeyboard() {
@@ -66,17 +68,99 @@ export function marketDetailKeyboard(market: Market) {
   return kb;
 }
 
-export function betAmountKeyboard(marketId: string, outcomeIndex: number) {
-  return new InlineKeyboard()
-    .text('$10', `amt:${marketId}:${outcomeIndex}:10`)
-    .text('$25', `amt:${marketId}:${outcomeIndex}:25`)
-    .text('$50', `amt:${marketId}:${outcomeIndex}:50`)
-    .row()
-    .text('$100', `amt:${marketId}:${outcomeIndex}:100`)
-    .text('$250', `amt:${marketId}:${outcomeIndex}:250`)
+export function betAmountKeyboard(
+  marketId: string,
+  outcomeIndex: number,
+  amounts: number[] = [10, 25, 50, 100],
+) {
+  const kb = new InlineKeyboard();
+  for (const a of amounts.slice(0, 3)) {
+    kb.text(`$${a}`, `amt:${marketId}:${outcomeIndex}:${a}`);
+  }
+  kb.row();
+  for (const a of amounts.slice(3, 5)) {
+    kb.text(`$${a}`, `amt:${marketId}:${outcomeIndex}:${a}`);
+  }
+  kb.row();
+  return kb
     .text('Custom ✏️', `amt:custom:${marketId}:${outcomeIndex}`)
     .row()
+    .text('📋 Limit order', `order:setup:${marketId}:${outcomeIndex}`)
     .text('⬅️ Back', `market:${marketId}`);
+}
+
+export function hubKeyboard() {
+  return new InlineKeyboard()
+    .text('⚡ Quick Bet', 'hub:quick')
+    .text('📊 Markets', 'hub:markets')
+    .row()
+    .text('🐋 Copy Whales', 'hub:copy')
+    .text('📋 Limit Orders', 'hub:orders')
+    .row()
+    .text('👛 Wallet', 'hub:wallet')
+    .text('🎁 Refer & Earn', 'hub:refer')
+    .row()
+    .url('🌐 Web Terminal', config.WEB_APP_URL);
+}
+
+export function quickBetKeyboard(
+  markets: Market[],
+  defaultAmount: number,
+) {
+  const kb = new InlineKeyboard();
+  for (const m of markets.slice(0, 3)) {
+    const fav = m.outcomes.reduce(
+      (best, o, i) => (o.probability > m.outcomes[best].probability ? i : best),
+      0,
+    );
+    const label = m.isLive ? `🔴 ${m.id}` : m.id;
+    kb.text(`⚡ ${label} $${defaultAmount}`, `quick:${m.id}:${fav}:${defaultAmount}`).row();
+  }
+  kb.text('📊 All markets', 'hub:markets').text('🏠 Hub', 'menu:home');
+  return kb;
+}
+
+export function referralKeyboard(link: string) {
+  return new InlineKeyboard()
+    .url('📤 Share link', `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('Bet on prediction markets on Robinhood Chain 🏹')}`)
+    .row()
+    .text('🏠 Hub', 'menu:home');
+}
+
+export function leaderboardKeyboard() {
+  return new InlineKeyboard()
+    .text('🐋 Copy whales', 'hub:copy')
+    .text('⚡ Quick bet', 'hub:quick')
+    .row()
+    .text('🏠 Hub', 'menu:home');
+}
+
+export function copyWhaleKeyboard() {
+  const kb = new InlineKeyboard();
+  for (const w of TOP_WHALES) {
+    kb.text(`👁 ${w.handle}`, `whale:watch:${w.id}`)
+      .text(`⚡ Copy`, `whale:copy:${w.id}`)
+      .row();
+  }
+  kb.text('🏠 Hub', 'menu:home');
+  return kb;
+}
+
+export function settingsKeyboard(s: { notifyResolve: boolean; notifyWhale: boolean }) {
+  return new InlineKeyboard()
+    .text(`🔔 Resolve: ${s.notifyResolve ? 'ON' : 'OFF'}`, 'set:toggle_resolve')
+    .text(`🐋 Whales: ${s.notifyWhale ? 'ON' : 'OFF'}`, 'set:toggle_whale')
+    .row()
+    .text('🚰 Testnet faucet', 'set:faucet')
+    .text('🏠 Hub', 'menu:home');
+}
+
+export function ordersKeyboard() {
+  return new InlineKeyboard()
+    .text('➕ New order', 'order:new')
+    .text('📊 Markets', 'hub:markets')
+    .row()
+    .text('🏠 Hub', 'menu:home');
 }
 
 export function premiumKeyboard() {

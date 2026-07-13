@@ -1,6 +1,7 @@
 import type { Context } from 'grammy';
 import { getEnrichedMarket } from '../chain/markets.js';
 import { betAmountKeyboard, instantBetKeyboard } from '../keyboards/index.js';
+import { getSettings } from '../db/index.js';
 import {
   estimatePayout,
   formatBetInstructions,
@@ -63,7 +64,14 @@ export async function betCallback(ctx: Context) {
       `💰 *Place Bet*\n\n${formatMarketCard(market, true)}\n\n` +
         `Pick: *${outcome?.label}* (${outcome?.probability}%)\n\n` +
         `Select amount (USDC):`,
-      { parse_mode: 'Markdown', reply_markup: betAmountKeyboard(marketId, outcomeIndex) },
+      {
+        parse_mode: 'Markdown',
+        reply_markup: betAmountKeyboard(
+          marketId,
+          outcomeIndex,
+          ctx.from ? getSettings(ctx.from.id).quickBets : undefined,
+        ),
+      },
     );
     return;
   }

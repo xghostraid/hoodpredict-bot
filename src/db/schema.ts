@@ -9,7 +9,37 @@ CREATE TABLE IF NOT EXISTS users (
   tier TEXT NOT NULL DEFAULT 'free',
   trial_started_at TEXT,
   premium_until TEXT,
+  referred_by INTEGER,
+  referral_earnings REAL NOT NULL DEFAULT 0,
+  referrals_count INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS user_settings (
+  telegram_id INTEGER PRIMARY KEY,
+  default_bet_usd REAL NOT NULL DEFAULT 25,
+  quick_bets TEXT NOT NULL DEFAULT '10,25,50,100',
+  notify_resolve INTEGER NOT NULL DEFAULT 1,
+  notify_whale INTEGER NOT NULL DEFAULT 1,
+  cashback_pct REAL NOT NULL DEFAULT 2
+);
+
+CREATE TABLE IF NOT EXISTS limit_orders (
+  id TEXT PRIMARY KEY,
+  telegram_id INTEGER NOT NULL,
+  market_id TEXT NOT NULL,
+  outcome_index INTEGER NOT NULL,
+  amount_usd REAL NOT NULL,
+  trigger_probability REAL NOT NULL,
+  direction TEXT NOT NULL DEFAULT 'above',
+  status TEXT NOT NULL DEFAULT 'active',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS whale_watches (
+  telegram_id INTEGER NOT NULL,
+  whale_id TEXT NOT NULL,
+  PRIMARY KEY (telegram_id, whale_id)
 );
 
 CREATE TABLE IF NOT EXISTS bets (

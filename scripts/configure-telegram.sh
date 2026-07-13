@@ -14,7 +14,13 @@ curl -s -X POST "${API}/setMyCommands" \
   -H "Content-Type: application/json" \
   -d '{
     "commands": [
-      {"command": "start", "description": "Main menu"},
+      {"command": "start", "description": "Terminal hub & dashboard"},
+      {"command": "quickbet", "description": "One-tap hot market bets"},
+      {"command": "limit", "description": "Limit order on odds"},
+      {"command": "copy", "description": "Copy whale predictors"},
+      {"command": "leaderboard", "description": "Top predictors"},
+      {"command": "refer", "description": "Refer & earn 5%"},
+      {"command": "settings", "description": "Bet defaults & alerts"},
       {"command": "markets", "description": "Browse prediction markets"},
       {"command": "mybets", "description": "My active bets"},
       {"command": "portfolio", "description": "Portfolio summary"},

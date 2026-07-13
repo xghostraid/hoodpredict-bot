@@ -8,7 +8,11 @@ const envSchema = z.object({
   XAI_MODEL: z.string().default('grok-4.5'),
   RPC_URL: z.string().default('https://rpc.mainnet.chain.robinhood.com'),
   CHAIN_ID: z.coerce.number().default(4663),
-  USE_TESTNET: z.coerce.boolean().default(false),
+  USE_TESTNET: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((v) => v === true || v === 'true')
+    .default(false),
   COLLATERAL_SYMBOL: z.string().optional(),
   FACTORY_ADDRESS: z.string().optional(),
   USDC_ADDRESS: z.string().optional(),

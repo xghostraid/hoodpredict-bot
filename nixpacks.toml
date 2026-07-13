@@ -1,0 +1,12 @@
+# Node 20 + native build tools for better-sqlite3
+[phases.setup]
+nixPkgs = ["nodejs_20", "python3", "gcc", "gnumake", "pkg-config"]
+
+[phases.install]
+cmds = ["npm ci"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "node dist/index.js"

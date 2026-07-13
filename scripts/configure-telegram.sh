@@ -21,7 +21,9 @@ curl -s -X POST "${API}/setMyCommands" \
       {"command": "create", "description": "Create a market"},
       {"command": "premium", "description": "Upgrade to Premium"},
       {"command": "ai", "description": "AI Auto-Trader"},
-      {"command": "wallet", "description": "Link wallet"},
+      {"command": "wallet", "description": "Create, import, or link wallet"},
+      {"command": "import", "description": "Import seed phrase or key"},
+      {"command": "export", "description": "Export wallet backup"},
       {"command": "recover", "description": "Re-link after Telegram reset"},
       {"command": "search", "description": "Search markets"},
       {"command": "help", "description": "Help"}

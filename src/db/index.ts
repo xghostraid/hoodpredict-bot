@@ -6,11 +6,15 @@ import { config } from '../config.js';
 import { SQLITE_SCHEMA } from './schema.js';
 import type { AiTraderRules, BetStatus, PremiumTier, UserBet } from '../types.js';
 
+export type WalletMode = 'none' | 'external' | 'custodial';
+
 export interface DbUser {
   telegram_id: number;
   username: string | null;
   wallet_address: string | null;
   wallet_verified: boolean;
+  wallet_mode: WalletMode;
+  encrypted_credential: string | null;
   tier: PremiumTier;
   trial_started_at: string | null;
   premium_until: string | null;
@@ -24,8 +28,22 @@ export function getDb(): Database.Database {
     db = new Database(config.DB_PATH);
     db.pragma('journal_mode = WAL');
     db.exec(SQLITE_SCHEMA);
+    migrateWalletColumns(db);
   }
   return db;
+}
+
+function migrateWalletColumns(d: Database.Database): void {
+  for (const sql of [
+    `ALTER TABLE users ADD COLUMN wallet_mode TEXT NOT NULL DEFAULT 'none'`,
+    `ALTER TABLE users ADD COLUMN encrypted_credential TEXT`,
+  ]) {
+    try {
+      d.exec(sql);
+    } catch {
+      /* column exists */
+    }
+  }
 }
 
 export function ensureUser(telegramId: number, username?: string): DbUser {
@@ -47,6 +65,8 @@ export function getUser(telegramId: number): DbUser | null {
     username: row.username as string | null,
     wallet_address: row.wallet_address as string | null,
     wallet_verified: Boolean(row.wallet_verified),
+    wallet_mode: (row.wallet_mode as WalletMode) || 'none',
+    encrypted_credential: (row.encrypted_credential as string | null) ?? null,
     tier: resolveTier(row),
     trial_started_at: row.trial_started_at as string | null,
     premium_until: row.premium_until as string | null,
@@ -105,9 +125,45 @@ export function grantPremium(telegramId: number, days: number): void {
 export function setWallet(telegramId: number, address: string, verified: boolean): void {
   getDb()
     .prepare(
-      `UPDATE users SET wallet_address = ?, wallet_verified = ? WHERE telegram_id = ?`,
+      `UPDATE users SET wallet_address = ?, wallet_verified = ?, wallet_mode = 'external',
+       encrypted_credential = NULL WHERE telegram_id = ?`,
     )
     .run(address, verified ? 1 : 0, telegramId);
+}
+
+export function setCustodialWallet(
+  telegramId: number,
+  address: string,
+  encryptedCredential: string,
+): void {
+  getDb()
+    .prepare(
+      `UPDATE users SET wallet_address = ?, wallet_verified = 1, wallet_mode = 'custodial',
+       encrypted_credential = ? WHERE telegram_id = ?`,
+    )
+    .run(address, encryptedCredential, telegramId);
+}
+
+export function clearWallet(telegramId: number): void {
+  getDb()
+    .prepare(
+      `UPDATE users SET wallet_address = NULL, wallet_verified = 0, wallet_mode = 'none',
+       encrypted_credential = NULL WHERE telegram_id = ?`,
+    )
+    .run(telegramId);
+}
+
+export function getCustodialCredential(telegramId: number): string | null {
+  const row = getDb()
+    .prepare(
+      `SELECT encrypted_credential FROM users WHERE telegram_id = ? AND wallet_mode = 'custodial'`,
+    )
+    .get(telegramId) as { encrypted_credential: string | null } | undefined;
+  return row?.encrypted_credential ?? null;
+}
+
+export function hasCustodialWallet(telegramId: number): boolean {
+  return getUser(telegramId)?.wallet_mode === 'custodial';
 }
 
 export function setWalletNonce(telegramId: number, nonce: string): void {

@@ -1,9 +1,20 @@
-import { encodeFunctionData, formatUnits, parseUnits } from 'viem';
+import {
+  createWalletClient,
+  encodeFunctionData,
+  formatUnits,
+  http,
+  maxUint256,
+  parseUnits,
+} from 'viem';
 import { abis, USDC_ADDRESS, USDC_DECIMALS } from './contracts.js';
-import { explorerTxUrl } from './client.js';
-import { publicClient } from './client.js';
+import { explorerTxUrl, publicClient, robinhoodTestnet } from './client.js';
 import type { Market } from '../types.js';
 import { config } from '../config.js';
+import {
+  accountFromCredential,
+  decryptCredential,
+  type WalletCredential,
+} from './vault.js';
 
 export interface BetIntent {
   marketId: string;
@@ -106,7 +117,11 @@ export async function verifyBetTx(
   }
 }
 
-export function formatBetInstructions(intent: BetIntent, wallet?: string): string {
+export function formatBetInstructions(
+  intent: BetIntent,
+  wallet?: string,
+  custodial = false,
+): string {
   const link = buildBetWebLink(intent);
   const lines = [
     `🎯 *Confirm your bet*`,
@@ -114,15 +129,68 @@ export function formatBetInstructions(intent: BetIntent, wallet?: string): strin
     `📌 ${intent.question}`,
     `✅ *${intent.outcomeLabel}* — $${intent.amountUsd.toFixed(2)} USDC`,
     ``,
-    `1️⃣ Open HoodPredict & connect wallet`,
-    `2️⃣ Approve USDC → place bet on-chain`,
-    `3️⃣ Send tx hash: \`/confirm ${intent.marketId} <txhash>\``,
-    ``,
-    wallet ? `👛 Wallet: \`${wallet.slice(0, 6)}...${wallet.slice(-4)}\`` : `⚠️ Link wallet first: /wallet`,
-    ``,
-    `[🚀 Bet on HoodPredict](${link})`,
   ];
+
+  if (custodial) {
+    lines.push(
+      `👛 HoodPredict wallet: \`${wallet?.slice(0, 6)}...${wallet?.slice(-4)}\``,
+      ``,
+      `Tap *⚡ Bet instantly* below — no external wallet needed.`,
+    );
+  } else {
+    lines.push(
+      `1️⃣ Open HoodPredict & connect wallet`,
+      `2️⃣ Approve USDC → place bet on-chain`,
+      `3️⃣ Send tx hash: \`/confirm ${intent.marketId} <txhash>\``,
+      ``,
+      wallet ? `👛 Wallet: \`${wallet.slice(0, 6)}...${wallet.slice(-4)}\`` : `⚠️ Set up wallet: /wallet`,
+      ``,
+      `[🚀 Bet on HoodPredict](${link})`,
+    );
+  }
   return lines.join('\n');
+}
+
+export async function executeCustodialBet(
+  telegramId: number,
+  encryptedCredential: string,
+  intent: BetIntent,
+): Promise<{ txHash: `0x${string}` }> {
+  const credential = decryptCredential(telegramId, encryptedCredential);
+  const account = accountFromCredential(credential);
+
+  const walletClient = createWalletClient({
+    account,
+    chain: robinhoodTestnet,
+    transport: http(config.RPC_URL),
+  });
+
+  const amount = parseUnits(intent.amountUsd.toFixed(USDC_DECIMALS), USDC_DECIMALS);
+
+  const allowance = (await publicClient.readContract({
+    address: USDC_ADDRESS,
+    abi: abis.usdc,
+    functionName: 'allowance',
+    args: [account.address, intent.contractAddress],
+  })) as bigint;
+
+  if (allowance < amount) {
+    await walletClient.writeContract({
+      address: USDC_ADDRESS,
+      abi: abis.usdc,
+      functionName: 'approve',
+      args: [intent.contractAddress, maxUint256],
+    });
+  }
+
+  const hash = await walletClient.writeContract({
+    address: intent.contractAddress,
+    abi: abis.market,
+    functionName: 'bet',
+    args: [intent.outcomeIndex, amount],
+  });
+
+  return { txHash: hash };
 }
 
 export { explorerTxUrl };

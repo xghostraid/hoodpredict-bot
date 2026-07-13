@@ -1,13 +1,22 @@
 import type { Context } from 'grammy';
 import { getEnrichedMarket } from '../chain/markets.js';
-import { betAmountKeyboard } from '../keyboards/index.js';
+import { betAmountKeyboard, instantBetKeyboard } from '../keyboards/index.js';
 import {
   estimatePayout,
   formatBetInstructions,
   verifyBetTx,
   type BetIntent,
 } from '../chain/bets.js';
-import { confirmBet, ensureUser, getUser, getUserBets, saveBet } from '../db/index.js';
+import {
+  confirmBet,
+  ensureUser,
+  getUser,
+  getUserBets,
+  saveBet,
+  hasCustodialWallet,
+  getCustodialCredential,
+} from '../db/index.js';
+import { executeCustodialBet, explorerTxUrl } from '../chain/bets.js';
 import { formatMarketCard } from '../formatters/markets.js';
 
 const pendingAmount = new Map<number, { marketId: string; outcomeIndex: number }>();
@@ -134,14 +143,83 @@ export async function placeBetFlow(
     placedAt: new Date().toISOString(),
   });
 
+  const custodial = hasCustodialWallet(ctx.from.id);
+  const replyMarkup = custodial
+    ? instantBetKeyboard(marketId, outcomeIndex, amountUsd)
+    : undefined;
+
   await ctx.reply(
-    formatBetInstructions(intent, user?.wallet_address ?? undefined) +
+    formatBetInstructions(intent, user?.wallet_address ?? undefined, custodial) +
       `\n\n💰 Est. payout if win: *$${payout.toFixed(2)}*`,
     {
       parse_mode: 'Markdown',
       link_preview_options: { is_disabled: true },
+      reply_markup: replyMarkup,
     },
   );
+}
+
+export async function instantBetCallback(ctx: Context) {
+  const data = ctx.callbackQuery?.data;
+  if (!data?.startsWith('instant:') || !ctx.from) return;
+
+  const [, marketId, outcomeStr, amountStr] = data.split(':');
+  const outcomeIndex = parseInt(outcomeStr, 10);
+  const amountUsd = parseFloat(amountStr);
+
+  const blob = getCustodialCredential(ctx.from.id);
+  if (!blob) {
+    await ctx.answerCallbackQuery({ text: 'Set up wallet first: /wallet', show_alert: true });
+    return;
+  }
+
+  const market = await getEnrichedMarket(marketId);
+  if (!market?.contractAddress) return;
+
+  await ctx.answerCallbackQuery({ text: '⏳ Signing on-chain…' });
+
+  const intent = {
+    marketId,
+    contractAddress: market.contractAddress as `0x${string}`,
+    outcomeIndex,
+    outcomeLabel: market.outcomes[outcomeIndex].label,
+    amountUsd,
+    question: market.question,
+  };
+
+  try {
+    const { txHash } = await executeCustodialBet(ctx.from.id, blob, intent);
+    const payout = estimatePayout(market, outcomeIndex, amountUsd);
+
+    saveBet({
+      telegramId: ctx.from.id,
+      marketId,
+      marketQuestion: market.question,
+      outcomeIndex,
+      outcomeLabel: intent.outcomeLabel,
+      amount: amountUsd,
+      collateral: market.collateral,
+      potentialPayout: payout,
+      status: 'active',
+      txHash,
+      contractAddress: market.contractAddress,
+      placedAt: new Date().toISOString(),
+    });
+
+    await ctx.reply(
+      `🎉 *Bet placed on-chain!*\n\n` +
+        `✅ ${intent.outcomeLabel} — $${amountUsd} on ${market.question.slice(0, 50)}…\n` +
+        `🔗 [View tx](${explorerTxUrl(txHash)})`,
+      { parse_mode: 'Markdown' },
+    );
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Transaction failed';
+    await ctx.reply(
+      `❌ Bet failed: ${msg.slice(0, 120)}\n\n` +
+        `Ensure you have testnet USDC + ETH for gas.`,
+      { parse_mode: 'Markdown' },
+    );
+  }
 }
 
 function commandArgs(ctx: Context): string[] {

@@ -110,12 +110,31 @@ export function aiSuggestionKeyboard(tradeId: string, marketId: string, outcomeI
 
 export function walletKeyboard() {
   return new InlineKeyboard()
-    .text('🔗 Link address', 'wallet:link')
-    .text('✍️ Verify signature', 'wallet:verify')
+    .text('✨ Create wallet', 'wallet:create')
+    .text('📥 Import wallet', 'wallet:import')
     .row()
-    .text('🔄 Account recovery', 'recover:start')
+    .text('🔗 Link external', 'wallet:link')
+    .text('✍️ Verify', 'wallet:verify')
     .row()
-    .url('🌐 Open HoodPredict', config.WEB_APP_URL);
+    .text('🔑 Export backup', 'wallet:export')
+    .text('🗑 Remove', 'wallet:remove')
+    .row()
+    .text('🔄 Recovery', 'recover:start')
+    .url('🌐 Web app', config.WEB_APP_URL);
+}
+
+export function walletCreatedKeyboard() {
+  return new InlineKeyboard()
+    .text("✅ I've saved my seed", 'wallet:confirm_create')
+    .row()
+    .text('❌ Cancel', 'wallet:cancel_create');
+}
+
+export function instantBetKeyboard(marketId: string, outcomeIndex: number, amount: number) {
+  return new InlineKeyboard()
+    .text('⚡ Bet instantly', `instant:${marketId}:${outcomeIndex}:${amount}`)
+    .row()
+    .text('⬅️ Back', `market:${marketId}`);
 }
 
 export function recoverKeyboard() {

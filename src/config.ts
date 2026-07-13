@@ -23,6 +23,7 @@ const envSchema = z.object({
   DB_PATH: z.string().default('data/hoodpredict.db'),
   SUPABASE_URL: z.string().optional(),
   SUPABASE_SERVICE_KEY: z.string().optional(),
+  WALLET_ENCRYPTION_SECRET: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

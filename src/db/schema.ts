@@ -4,6 +4,8 @@ CREATE TABLE IF NOT EXISTS users (
   username TEXT,
   wallet_address TEXT,
   wallet_verified INTEGER NOT NULL DEFAULT 0,
+  wallet_mode TEXT NOT NULL DEFAULT 'none',
+  encrypted_credential TEXT,
   tier TEXT NOT NULL DEFAULT 'free',
   trial_started_at TEXT,
   premium_until TEXT,

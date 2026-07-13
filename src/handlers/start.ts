@@ -22,7 +22,9 @@ export const HELP_TEXT = (
   `/create — Create a new market\n` +
   `/premium — Upgrade + 7-day trial\n` +
   `/ai — AI Auto-Trader (Premium)\n` +
-  `/wallet — Link Robinhood Chain wallet\n` +
+  `/wallet — Create, import, or link wallet\n` +
+  `/import — Import seed phrase or private key\n` +
+  `/export — Export wallet backup\n` +
   `/recover — Re-link wallet after Telegram reset\n` +
   `/search <query> — Find markets\n\n` +
   `*Betting flow:*\n` +

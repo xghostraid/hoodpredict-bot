@@ -7,11 +7,20 @@ import {
   confirmHandler,
   customAmountHandler,
   subscribeCallback,
+  instantBetCallback,
 } from './bets.js';
 import { portfolioHandler } from './portfolio.js';
 import { premiumHandler, premiumCallback, grantHandler } from './premium.js';
 import { aiHandler, aiCallback, aiRulesTextHandler, forecastCallback } from './ai.js';
-import { walletHandler, walletCommand, verifyCommand, walletCallback } from './wallet.js';
+import {
+  walletHandler,
+  walletCommand,
+  verifyCommand,
+  walletCallback,
+  importCommand,
+  exportCommand,
+  importTextHandler,
+} from './wallet.js';
 import { recoverHandler, recoverCallback, recoverAddressHandler } from './recover.js';
 import { createHandler } from './create.js';
 
@@ -26,6 +35,8 @@ export function registerHandlers(bot: Bot) {
   bot.command('subscribe', premiumHandler);
   bot.command('ai', aiHandler);
   bot.command('wallet', walletCommand);
+  bot.command('import', importCommand);
+  bot.command('export', exportCommand);
   bot.command('verify', verifyCommand);
   bot.command('confirm', confirmHandler);
   bot.command('search', searchHandler);
@@ -39,7 +50,8 @@ export function registerHandlers(bot: Bot) {
     if (data.startsWith('cat:') || data.startsWith('market:') || data.startsWith('markets:')) {
       return marketsCallback(ctx);
     }
-    if (data.startsWith('bet:') || data.startsWith('amt:')) return betCallback(ctx);
+    if (data.startsWith('bet:') || data.startsWith('amt:') || data.startsWith('instant:'))
+      return data.startsWith('instant:') ? instantBetCallback(ctx) : betCallback(ctx);
     if (data.startsWith('sub:')) return subscribeCallback(ctx);
     if (data.startsWith('premium:')) return premiumCallback(ctx);
     if (data.startsWith('ai:')) return aiCallback(ctx);
@@ -54,6 +66,7 @@ export function registerHandlers(bot: Bot) {
     if (await customAmountHandler(ctx)) return;
     if (await aiRulesTextHandler(ctx)) return;
     if (await recoverAddressHandler(ctx)) return;
+    if (await importTextHandler(ctx)) return;
     return next();
   });
 }
